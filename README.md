@@ -45,3 +45,24 @@ srt2fcpxml -srt /tmp/test.srt
 the `fcpxml` file named with srt file name will be generated automatically in the directory of srt file.
 
 在 srt 文件的目录中会自动生成以srt文件名命名的`fcpxml`文件。
+
+-----------------------------------------
+
+You can now use your own Motion Titles by specifying the `-moti_path` flag. 
+
+### Usage
+
+```bash
+./srt2fcpxml -srt test.srt -moti_path "~/Titles.localized/MyCategory/MyTemplate/MyTemplate.moti"
+```
+
+### Important Rules
+Path Format :
+The path MUST start with ~/Titles.localized/. This ensures the XML is portable across different Macs.
+
+Quoting :
+Always wrap the path in double quotes ("), especially if there are spaces in your template name.
+
+
+Automatic Verification:
+The tool automatically verifies the physical file existence in your Movies/Motion Templates.localized/ directory. If the file is missing, it will warn you and fallback to the basic title.

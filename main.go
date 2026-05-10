@@ -18,6 +18,8 @@ func main() {
 	width := flag.Int("width", 1920, "width resolution default 1920")
 	height := flag.Int("height", 1080, "high resolution default 1080")
 
+	moti_path := flag.String("moti_path", "", "specify FCP title moti path")
+
 	flag.Parse()
 	var frameDuration interface{}
 	if len(*frameDurationPoint) > 2 {
@@ -37,7 +39,7 @@ func main() {
 	}
 
 	project, path := getPath(*srtFile)
-	result, _ := core.Srt2FcpXmlExport(project, frameDuration, f, *width, *height)
+	result, _ := core.Srt2FcpXmlExport(project, frameDuration, f, *width, *height, *moti_path)
 	out += string(result)
 	targetFile := fmt.Sprintf("%s/%s.fcpxml", path, project)
 	fd, err := os.Create(targetFile)

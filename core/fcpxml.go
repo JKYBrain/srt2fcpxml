@@ -3,6 +3,10 @@ package core
 import (
 	"encoding/xml"
 	"strings"
+	"fmt"      
+	"os"       
+    	"path"    
+	"path/filepath" 
 
 	"github.com/asticode/go-astisub"
 	"github.com/hnlq715/srt2fcpxml/core/FcpXML"
@@ -16,10 +20,57 @@ import (
 	"github.com/hnlq715/srt2fcpxml/core/FcpXML/Resources"
 )
 
-func Srt2FcpXmlExport(projectName string, frameDuration interface{}, subtitles *astisub.Subtitles, width, height int) ([]byte, error) {
+// getPhysicalPath translates FCP virtual path to the real filesystem path
+func getPhysicalPath(motiPath string) string {
+	// 1. Get the current user's home directory dynamically
+	home, err := os.UserHomeDir()
+	if err != nil {
+		// Fallback to a safe default if home cannot be determined
+		home = "/Users" 
+	}
+
+	// 2. Handle sudo environment: redirect from /var/root back to the real user
+	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" {
+		home = "/Users/" + sudoUser
+	}
+
+	// 3. Define the mandatory FCP template directory structure on macOS
+	// We use "Movies/Motion Templates.localized" as the bridge
+	fcpRelativeRoot := "Movies/Motion Templates.localized"
+
+	// 4. Translate "~/..." to "/Users/username/Movies/Motion Templates.localized/..."
+	// Remove the "~/" prefix from the input and join it with our resolved physical root
+	relativePath := strings.TrimPrefix(motiPath, "~/")
+	return filepath.Join(home, fcpRelativeRoot, relativePath)
+}
+
+func Srt2FcpXmlExport(projectName string, frameDuration interface{}, subtitles *astisub.Subtitles, width, height int, moti_path string) ([]byte, error) {
 	fcpxml := FcpXML.New()
 	res := Resources.NewResources()
-	res.SetEffect(Resources.NewBackGroundEffect())
+	effect := Resources.NewEffect()
+
+	// Process custom Motion template path if provided
+	if moti_path != "" {
+		// Strict validation: Path MUST start with "~/Titles.localized" for FCP compatibility
+		if strings.HasPrefix(moti_path, "~/Titles.localized") {
+			// --- Use the helper function to get the actual path for os.Stat ---
+			checkPath := getPhysicalPath(moti_path)
+			if _, err := os.Stat(checkPath); os.IsNotExist(err) {
+				fmt.Printf("Warning: Motion template file not found at: %s\nUsing basic title instead.\n", checkPath)
+			} else {
+				// Validation passed: Set Uid using the FCP virtual format (~/)
+				effect.Uid = moti_path
+				
+				// Extract filename for the effect name resource
+				baseName := path.Base(moti_path)
+				effect.Name = strings.TrimSuffix(baseName, path.Ext(baseName))
+			}
+		} else {
+			// Path doesn't start with the required prefix
+			fmt.Printf("Warning: Path %s must start with '~/Titles.localized'. Using basic title.\n", moti_path)
+		}
+	}
+	res.SetEffect(effect)
 	format := Resources.NewFormat().
 		SetWidth(width).
 		SetHeight(height).
